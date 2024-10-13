@@ -148,6 +148,30 @@ class UsersView(View):
         )
         users_list = list(users)
         return JsonResponse({"users": users_list}, status=200)
+    
+    def put(self, request, id):
+        data = json.loads(request.body)
+        try:
+            user = User.objects.get(id=id)
+        except User.DoesNotExist:
+            return JsonResponse({"error": "User not found"}, status=404)
+        
+        user.username = data.get("username", user.username)
+        user.email = data.get("email", user.email)
+        user.first_name = data.get("first_name", user.first_name)
+        user.last_name = data.get("last_name", user.last_name)
+        user.save()
+
+        return JsonResponse(
+            {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+            },
+            status=200,
+        )
 
 
 class UserView(View):
@@ -169,3 +193,13 @@ class UserView(View):
 def count_users(request):
     users_count = User.objects.count()
     return JsonResponse({"users_count": users_count}, status=200)
+
+def get_users_by_database(request, db_alias):
+    try:
+        # Retrieve all users from the specified database connection
+        users = User.objects.using(db_alias).all()
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+    
+    users_data = list(users.values('id', 'username', 'email'))
+    return JsonResponse(users_data, safe=False)
